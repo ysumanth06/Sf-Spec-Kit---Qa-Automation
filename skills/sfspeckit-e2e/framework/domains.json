@@ -1,0 +1,32 @@
+{
+  "domains": {
+    "Sales": [
+      "Lead",
+      "Campaign",
+      "Account",
+      "Contact",
+      "Opportunity",
+      "OpportunityLineItem",
+      "Quote",
+      "QuoteLineItem",
+      "Product2",
+      "Pricebook2",
+      "PricebookEntry"
+    ],
+    "Service": [
+      "Case",
+      "CaseComment",
+      "Entitlement",
+      "ServiceContract",
+      "Solution"
+    ],
+    "FieldService": [
+      "ServiceAppointment",
+      "WorkOrder",
+      "WorkOrderLineItem",
+      "ServiceResource",
+      "ServiceTerritory"
+    ]
+  },
+  "_comment": "Add your custom domain clusters below. Example: \"CongaContracting\": [\"Opportunity\", \"Apttus__APTS_Agreement__c\"]"
+}
