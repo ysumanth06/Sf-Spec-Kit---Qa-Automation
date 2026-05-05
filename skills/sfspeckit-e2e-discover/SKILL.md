@@ -31,6 +31,7 @@ Natural language description of what to scan. Examples:
 /sfspeckit-e2e-discover scan the Account record page
 /sfspeckit-e2e-discover update selectors for the Case edit form
 /sfspeckit-e2e-discover map the Conga Agreement page as Admin
+/sfspeckit-e2e-discover heal all broken locators for namespace CPQ
 /sfspeckit-e2e-discover generate a Page Object for the Smart Grid custom LWC using the Spy Agent
 /sfspeckit-e2e-discover write a test for creating a new Opportunity — I'll describe the steps
 ```
@@ -71,7 +72,14 @@ If the test failed due to a Flaky Taxonomy RCA category (e.g., `ISOLATION_DATA_C
 - For **`ISOLATION_DATA_CONFLICT`**: Ensure the test generates unique data (e.g., append `@timestamp` to data fields) instead of sharing static records.
 - For **`ENVIRONMENT_VIEWPORT`**: Inject a `scrollTo` action step or update the element visibility assertions to ensure elements aren't hidden by responsive UI overflow.
 
-### Step 5: Update Selectors
+### Step 5: Bulk Healing Mode (Package Upgrades)
+
+If the user invokes bulk healing for a specific namespace (e.g., `/sfspeckit-e2e-discover heal all broken locators for namespace CPQ`):
+1. **Identify Target Tests**: Locate all `.test.json` files tagged with the specified vendor namespace that failed during the recent `regression` execution.
+2. **Bulk Analyze**: Automatically launch the Spy Agent to traverse the updated managed package UI components.
+3. **Bulk Update**: Update `selectors.ts` and the managed package's bespoke Page Object (`framework/page-objects/<Namespace>Page.ts`) with the new DOM structures simultaneously, saving the user from healing tests one-by-one.
+
+### Step 6: Update Selectors
 
 Update `selectors.ts` with corrected or new selectors. Follow these rules:
 - Prefer `getByRole()` and `getByLabel()` (ARIA-based, most stable)
@@ -79,7 +87,7 @@ Update `selectors.ts` with corrected or new selectors. Follow these rules:
 - Use CSS class selectors as last resort (most brittle)
 - Add comments documenting which Salesforce component each selector targets
 
-### Step 6: The Tooling API Spy Agent (For Complex Custom UIs)
+### Step 7: The Tooling API Spy Agent (For Complex Custom UIs)
 
 If the user asks to map a **custom LWC, managed package, or complex UI** (where `selectors.ts` is insufficient):
 
@@ -92,7 +100,7 @@ If the user asks to map a **custom LWC, managed package, or complex UI** (where 
    - It will automatically update `framework/executor/json-runner.spec.ts` to register the new actions (e.g., `"action": "SmartGridPage:fillDiscountPercentage"`).
 3. **Notify the User:** Inform the user that the Page Object was generated and registered, and provide an example of how they can now use the new actions in their JSON tests.
 
-### Step 7 (Optional): Generate Test Script from Verbal Description
+### Step 8 (Optional): Generate Test Script from Verbal Description
 
 If the QA tester says they want to "write a test" or "create a test script":
 

@@ -260,7 +260,15 @@ Use keywords like **fix**, **repair**, **update**, or **broken** and point it to
 
 **What it does:** It opens the browser, navigates to the element, finds the new DOM path, and updates your `framework/utils/selectors.ts` file without touching any page objects.
 
-#### 2. To Map a New Custom UI (Spy Agent)
+#### 2. To Bulk Heal Package Upgrades
+Use keywords like **heal all**, **bulk update**, and name the specific vendor namespace.
+
+*   `/e2e-discover heal all broken locators for namespace CPQ`
+*   `/e2e-discover bulk update selectors for the Conga package`
+
+**What it does:** It locates all `.test.json` files tagged with the specified vendor namespace that failed during regression. It automatically launches the Spy Agent to traverse the updated package UI, bulk-updating the `selectors.ts` and bespoke Page Objects simultaneously, saving you from fixing dozens of broken tests one-by-one.
+
+#### 3. To Map a New Custom UI (Spy Agent)
 Use keywords like **map**, **learn**, **spy**, or **generate** and name the specific Custom LWC, Managed Package, or complex Visualforce page.
 
 *   `/e2e-discover map the new Smart Grid custom LWC`
@@ -269,7 +277,7 @@ Use keywords like **map**, **learn**, **spy**, or **generate** and name the spec
 
 **What it does:** It opens the browser, navigates to the component, recursively pierces the Shadow DOM to identify all buttons/inputs/tables, writes a brand new TypeScript Page Object file, and registers the new actions with the JSON runner.
 
-#### 3. To Auto-Heal Flaky Taxonomy Tests
+#### 4. To Auto-Heal Flaky Taxonomy Tests
 Use keywords like **heal**, **isolate**, or **fix flaky** to address tests that failed due to data concurrency or responsive viewport issues.
 
 *   `/e2e-discover fix TS-04 which failed with ISOLATION_DATA_CONFLICT`
