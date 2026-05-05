@@ -63,7 +63,7 @@ All 4 skills generate tests conforming to this exact schema. The sub-skills refe
       {
         "variable": "@accountId",
         "object": "Account",
-        "fields": { "Name": "QA-Test Account" }
+        "fields": { "Name": "{{QA_PREFIX}}-QA-Test-{{@timestamp}}" }
       }
     ],
     "apex": "// Optional: Anonymous Apex for complex setup"
@@ -90,6 +90,8 @@ All 4 skills generate tests conforming to this exact schema. The sub-skills refe
   ]
 }
 ```
+
+> **CRITICAL RULE (DATA ISOLATION)**: ALL text fields in `dataFactory` that require uniqueness (like Account Name or emails) MUST incorporate `{{QA_PREFIX}}` and a dynamic timestamp `{{@timestamp}}`. Never hardcode static names like `"QA-Test Account"`. This guarantees parallel execution won't fail with `UNABLE_TO_LOCK_ROW` or validation errors due to data collision.
 
 ### Supported Actions
 

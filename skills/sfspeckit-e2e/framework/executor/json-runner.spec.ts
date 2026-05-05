@@ -492,6 +492,7 @@ async function executeStepWithRetry(
     () => executeStep(step, page, recordPage, screenFlow, listView, conn, variables),
     maxRetries,
     1_000,
+    page,
   );
 }
 

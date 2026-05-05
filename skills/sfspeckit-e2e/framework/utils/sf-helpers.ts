@@ -159,6 +159,7 @@ export async function retryAction<T>(
   fn: () => Promise<T>,
   maxRetries = 3,
   baseDelayMs = 1_000,
+  page?: Page,
 ): Promise<T> {
   let lastError: Error | undefined;
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -167,7 +168,27 @@ export async function retryAction<T>(
     } catch (err) {
       lastError = err as Error;
       if (attempt < maxRetries - 1) {
-        const delay = baseDelayMs * Math.pow(2, attempt);
+        let delay = baseDelayMs * Math.pow(2, attempt);
+        const msg = lastError.message.toLowerCase();
+
+        // ── Auto-Heal: Data Lock (Jitter) ──
+        if (/unable_to_lock_row|row lock/i.test(msg)) {
+          console.warn(`[Auto-Heal] Data Lock detected. Adding jitter...`);
+          delay += Math.random() * 2000;
+        }
+
+        // ── Auto-Heal: Viewport (Scroll) ──
+        if (page && /outside of the viewport|hidden by/i.test(msg)) {
+          console.warn(`[Auto-Heal] Viewport issue detected. Scrolling...`);
+          await page.evaluate(() => window.scrollBy(0, 250)).catch(() => {});
+        }
+
+        // ── Auto-Heal: Cache/Stale (Wait) ──
+        if (page && /stale element|detached from dom/i.test(msg)) {
+          console.warn(`[Auto-Heal] Stale element detected. Waiting for LWS...`);
+          await page.waitForTimeout(500);
+        }
+
         await new Promise((r) => setTimeout(r, delay));
       }
     }

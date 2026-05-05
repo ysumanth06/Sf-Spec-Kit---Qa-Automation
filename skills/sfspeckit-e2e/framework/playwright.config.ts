@@ -10,20 +10,85 @@ delete process.env.NO_COLOR;
 
 function parsePersonas() {
   const personas = loadPersonas();
-  if (personas.length === 0) return [{ name: 'default', use: {} }];
+  const basePersonas = personas.length === 0 
+    ? [{ name: 'default', use: {} }] 
+    : personas.map((p) => ({
+        name: p.name,
+        use: {
+          persona: p.name,
+          profile: p.expected?.profile || p.name,
+          sfAlias: p.alias,
+          sfUsername: p.username,
+          expectedProfile: p.expected?.profile,
+          expectedRole: p.expected?.role,
+          expectedPS: p.expected?.permissionSets,
+        } as any,
+      }));
 
-  return personas.map((p) => ({
-    name: p.name,
-    use: {
-      persona: p.name,
-      profile: p.expected.profile || p.name,
-      sfAlias: p.alias,
-      sfUsername: p.username,
-      expectedProfile: p.expected.profile,
-      expectedRole: p.expected.role,
-      expectedPS: p.expected.permissionSets,
-    } as any,
-  }));
+  if (process.env.USE_BROWSERSTACK === 'true') {
+    const isBS = !!process.env.BROWSERSTACK_USERNAME;
+    if (!isBS) {
+      console.warn('USE_BROWSERSTACK is true but BROWSERSTACK_USERNAME is missing');
+    }
+    const bsProjects: any[] = [];
+    for (const bp of basePersonas) {
+      // 1. Chrome Cloud
+      bsProjects.push({
+        name: `${bp.name}-chrome-cloud`,
+        use: {
+          ...bp.use,
+          connectOptions: {
+            wsEndpoint: `wss://cdp.browserstack.com/playwright?caps=${encodeURIComponent(JSON.stringify({
+              'browser': 'chrome',
+              'browser_version': 'latest',
+              'os': 'Windows',
+              'os_version': '11',
+              'browserstack.username': process.env.BROWSERSTACK_USERNAME,
+              'browserstack.accessKey': process.env.BROWSERSTACK_ACCESS_KEY,
+            }))}`,
+          },
+        },
+      });
+      // 2. Safari Cloud
+      bsProjects.push({
+        name: `${bp.name}-safari-cloud`,
+        use: {
+          ...bp.use,
+          connectOptions: {
+            wsEndpoint: `wss://cdp.browserstack.com/playwright?caps=${encodeURIComponent(JSON.stringify({
+              'browser': 'playwright-webkit',
+              'browser_version': 'latest',
+              'os': 'OS X',
+              'os_version': 'Ventura',
+              'browserstack.username': process.env.BROWSERSTACK_USERNAME,
+              'browserstack.accessKey': process.env.BROWSERSTACK_ACCESS_KEY,
+            }))}`,
+          },
+        },
+      });
+      // 3. Mobile iOS
+      bsProjects.push({
+        name: `${bp.name}-mobile-ios`,
+        use: {
+          ...bp.use,
+          connectOptions: {
+            wsEndpoint: `wss://cdp.browserstack.com/playwright?caps=${encodeURIComponent(JSON.stringify({
+              'browser': 'playwright-webkit',
+              'device': 'iPhone 14',
+              'os': 'ios',
+              'os_version': '16',
+              'realMobile': 'true',
+              'browserstack.username': process.env.BROWSERSTACK_USERNAME,
+              'browserstack.accessKey': process.env.BROWSERSTACK_ACCESS_KEY,
+            }))}`,
+          },
+        },
+      });
+    }
+    return bsProjects;
+  }
+
+  return basePersonas;
 }
 
 export default defineConfig({

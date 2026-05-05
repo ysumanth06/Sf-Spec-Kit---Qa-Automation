@@ -30,7 +30,7 @@ export class RecordPage {
       await this.page.getByRole('option', { name: value, exact: false }).click();
       await waitForSpinner(this.page, 5_000);
       await waitForSalesforceNetwork(this.page, { settleMs: 300 });
-    }, 3, 500);
+    }, 3, 500, this.page);
   }
 
   async getPicklistOptions(label: string): Promise<string[]> {
@@ -159,7 +159,7 @@ export class RecordPage {
       await waitForSpinner(this.page);
       await waitForSalesforceNetwork(this.page);
       await waitForPageReady(this.page);
-    }, 2, 500);
+    }, 2, 500, this.page);
   }
 
   async clickEdit(): Promise<void> {
@@ -177,7 +177,7 @@ export class RecordPage {
 
       await getButtonByName(this.page, 'Edit').click();
       await waitForPageReady(this.page);
-    }, 2, 500);
+    }, 2, 500, this.page);
   }
 
   async clickDelete(): Promise<void> {
@@ -229,7 +229,7 @@ export class RecordPage {
       const toast = this.page.locator(`${SLDS.toast}, ${SLDS.toastMessage}`).first();
       await toast.waitFor({ state: 'visible', timeout: 10_000 });
       return (await toast.textContent())?.trim() || '';
-    }, 2, 500);
+    }, 2, 500, this.page);
   }
 
   async fillLookup(label: string, searchTerm: string): Promise<void> {
@@ -244,7 +244,7 @@ export class RecordPage {
       await option.click();
       await waitForSpinner(this.page, 5_000);
       await waitForSalesforceNetwork(this.page, { settleMs: 300 });
-    }, 3, 500);
+    }, 3, 500, this.page);
   }
 
   async getVisibleFields(): Promise<string[]> {

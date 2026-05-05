@@ -58,6 +58,8 @@ For **EACH** Acceptance Criterion:
 - Generate a negative test per persona with DENY access
 - Include `verifyDatabase` steps to prove UI saves match DB state
 
+> **CRITICAL RULE (DATA ISOLATION)**: Ensure generated test data (e.g., in `dataFactory` or `fill` steps) uses `{{QA_PREFIX}}` and dynamic timestamps `{{@timestamp}}` to guarantee tests are isolated and won't fail with `UNABLE_TO_LOCK_ROW` during parallel execution. Never hardcode static names for unique records.
+
 For **metadata-enriched** tests:
 - Test each Validation Rule triggers with invalid data
 - Test picklist values are selectable

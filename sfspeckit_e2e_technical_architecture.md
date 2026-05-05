@@ -49,13 +49,21 @@ await page.locator('button[title="Save"]').click();
 *   **The Problem:** Custom LWCs and Managed Packages have unpredictable UIs. Writing page objects for them is a slow, manual engineering task.
 *   **The Solution:** An autonomous Playwright MCP agent logs into the UI, recursively pierces the DOM, extracts interactive elements, and *automatically writes a bespoke TypeScript Page Object*. 
 
-### Defense 6: Data Pollution Prevention (The Clean Org Guarantee)
-*   **The Problem:** E2E testing frameworks quickly pollute testing environments with junk records ("Test Account 1", "asdasd"), making the org unusable for manual QA.
-*   **The Solution:** The framework uses an abstracted Data Factory (`dataPlan`). Every single record created by the framework is automatically prefixed with a `QA_PREFIX` (e.g., `QA-W0-`). A built-in cleanup utility (`npm run qa:cleanup`) automatically tracks and hard-deletes all generated data immediately after the test suite finishes—even if a test crashes mid-run.
+### Defense 6: Data Pollution & Isolation (The Clean Org Guarantee)
+*   **The Problem:** E2E testing frameworks quickly pollute testing environments with junk records. Furthermore, running tests in parallel causes `UNABLE_TO_LOCK_ROW` collisions when tests fight over the same static data (e.g., "QA-Test Account").
+*   **The Solution:** The framework enforces strict **Data Isolation by Design**. The JSON generators mandate dynamic timestamps (`{{QA_PREFIX}}-{{@timestamp}}`) for all unique data creation. A built-in cleanup utility (`npm run qa:cleanup`) automatically tracks and hard-deletes all generated data immediately after the test suite finishes.
 
 ### Defense 7: Native Visual Regression Testing
 *   **The Problem:** CSS and styling regressions (like a button moving 10 pixels to the left, or a font color changing) are impossible to catch with standard click-and-assert testing.
 *   **The Solution:** The framework integrates Playwright's native visual regression testing. It takes a pixel-perfect screenshot of the component and compares it to a baseline image. If the UI changes visually beyond an acceptable threshold, the test fails automatically.
+
+### Defense 8: Runtime Auto-Healing (Smart Retries)
+*   **The Problem:** Transient Salesforce UI and Data issues—like elements briefly hidden by responsive layouts or background row locks (`UNABLE_TO_LOCK_ROW`)—cause tests to fail randomly.
+*   **The Solution:** The `sf-helpers.ts` engine intercepts these specific Playwright and Salesforce errors mid-flight. It injects randomized jitter to break data lock deadlocks, automatically scrolls hidden elements into view, and waits for LWS caching to settle before retrying, all without failing the CI step.
+
+### Defense 9: Cross-Browser & Mobile Cloud Execution
+*   **The Problem:** Testing Salesforce Experience Cloud and Service Console across Mac, Windows, iOS, and different browsers is incredibly difficult to maintain locally.
+*   **The Solution:** Seamless BrowserStack integration via `playwright.config.ts`. Simply setting `USE_BROWSERSTACK=true` dynamically routes the execution matrix to run against `chrome-cloud`, `safari-cloud`, and `mobile-ios` instances automatically.
 
 ---
 
@@ -73,6 +81,7 @@ How does SFSpeckit E2E compare to the industry standard, Provar?
 | **CI/CD Integration**| Native Playwright (Fast) | Provar CLI (Heavy / Clunky) | 🏆 SFSpeckit |
 | **Salesforce Coverage**| 100% (Spy Agent + Iframe Engine) | 100% (Full platform) | 🤝 Tie |
 | **Parallel Execution** | True Data Isolation via Workers | Built-in | 🤝 Tie |
+| **Cross-Browser/Mobile**| Native BrowserStack Cloud Matrix | Complex remote node setup | 🏆 SFSpeckit |
 | **Reporting** | RCA Excel + HTML | Enterprise Jira Integration | 🏆 Provar |
 
 **Bottom Line:** SFSpeckit E2E matches Provar in stability and platform coverage, while drastically outperforming it in speed, test authoring experience, cost, and CI/CD simplicity.
@@ -254,6 +263,14 @@ Use keywords like **map**, **learn**, **spy**, or **generate** and name the spec
 
 **What it does:** It opens the browser, navigates to the component, recursively pierces the Shadow DOM to identify all buttons/inputs/tables, writes a brand new TypeScript Page Object file, and registers the new actions with the JSON runner.
 
+#### 3. To Auto-Heal Flaky Taxonomy Tests
+Use keywords like **heal**, **isolate**, or **fix flaky** to address tests that failed due to data concurrency or responsive viewport issues.
+
+*   `/e2e-discover fix TS-04 which failed with ISOLATION_DATA_CONFLICT`
+*   `/e2e-discover heal the flaky test that failed due to row lock`
+
+**What it does:** It intelligently targets the `.test.json` DSL file instead of the selectors. For data conflicts, it auto-injects dynamic `@timestamp` prefixes to test data to ensure isolation. For viewport issues, it injects explicit scroll commands into the DSL.
+
 > **Pro-Tip:** Because it's an AI agent, it's very forgiving. If you just paste in the error from your RCA Excel report like: `/e2e-discover test failed due to UI/DOM Timeout on clickSave for Opportunity`, it will instantly know it needs to run a repair on that specific locator!
 
 ---
@@ -268,3 +285,128 @@ When a test fails, the framework's `failure-analyzer.ts` intercepts the stack tr
 | **Assertion Failure** | The test expected "Active" but found "Inactive". | This is a real bug! Log a ticket in Jira for the developer. |
 | **Database Mismatch** | The UI showed success, but the SOQL database check failed. | Log a critical backend defect ticket. |
 | **Framework Limitation** | The JSON requested an action the runner doesn't know. | Use the Spy Agent (`/e2e-discover`) to teach the framework the new action. |
+| **Flaky: ISOLATION_DATA_CONFLICT** | Test failed due to a database row lock or concurrent data access. | The test design is flawed. Run `/e2e-discover` to inject dynamic `@timestamp` data isolation. |
+| **Flaky: ENVIRONMENT_VIEWPORT** | Playwright could not click an element because it was pushed off-screen by responsive layouts. | Let the Runtime Healer scroll it, or run `/e2e-discover` to hardcode a scroll step. |
+| **Flaky: INFRASTRUCTURE_CACHE** | Salesforce Lightning Web Security served a stale component state. | The Runtime Healer will wait, but consider refreshing the org or clearing cache. |
+
+---
+
+## 8. Third-Party Integrations Explained
+
+### BrowserStack (The Device Farm)
+BrowserStack is a paid, third-party cloud infrastructure service. It is not built into Playwright.
+*   **Playwright's Limitation**: Playwright runs tests locally. It can emulate mobile devices by resizing the screen, but it is not running a real iOS or Android operating system.
+*   **The BrowserStack Advantage**: BrowserStack hosts thousands of real physical devices (iPhones, Androids) and native operating systems (Windows 11, macOS) in data centers. 
+*   **Why we integrated it**: If a Salesforce Experience Cloud bug only occurs on a real Apple GPU or inside the native iOS WebKit engine, Playwright's local emulation will miss it. Enabling `USE_BROWSERSTACK=true` securely routes the Playwright execution to a real device in the cloud.
+
+### TestRail (The Management Dashboard)
+TestRail is a paid, third-party Test Case Management System (TCMS).
+*   **Playwright's Limitation**: Playwright is an *execution engine*. It runs code and outputs Pass/Fail logs. It does not know *why* a test exists, it cannot track manual testing, and it does not provide historical reporting.
+*   **TestRail's Advantage**: TestRail acts as a "System of Record" for QA (like Jira for testing). It stores all test cases, links them to Jira requirements for auditing, and provides dashboards for non-technical managers.
+*   **Why we DON'T need it**: We built the SFSpeckit ecosystem to replace TestRail completely using a **Docs-as-Code** strategy, saving thousands of dollars in licensing fees.
+
+---
+
+## 9. Docs-as-Code: The Git-Backed Test Management System
+
+The SFSpeckit ecosystem provides a native, completely free alternative to TestRail by turning your Git repository into the System of Record.
+
+1. **The System of Record**: Instead of storing tests in a cloud database, your Developer Story Markdown files (`task_story_01.md`) and the generated `.test.json` files serve as the permanent record. Because they live in Git, you have cryptographically secure version control and timestamped history for compliance auditors.
+2. **Manual Testing Scripts (`/sfspeckit-qa`)**: QA testers don't need TestRail to execute manual tests. The `/sfspeckit-qa` skill automatically reads the story and generates a `task_story_NN_test_scripts.md` file containing a step-by-step clickpath matrix. QA testers execute the steps in Salesforce, check off the markdown checkboxes, and commit the file as their official sign-off.
+3. **Traceability & Auditing (`/sfspeckit-release-notes`)**: The `/sfspeckit-e2e-story` skill automatically generates a Traceability Matrix (`task_story_NN_e2e_results.md`) mapping every AC to a Pass/Fail result. At the end of a sprint, the TPO runs `/sfspeckit-release-notes` to aggregate all manual sign-offs and automated results into a single, auditor-ready `RELEASE_NOTES.md` dashboard.
+
+---
+
+## 10. Git Strategies for SFSpeckit E2E Workflow
+
+When scaling testing across multiple developers and QA engineers, you must align the SFSpeckit workflow with your Git branching strategy. Below are the two primary models.
+
+### Strategy A: Shared Dev Sandbox (The Consolidated Pipeline)
+**Environment Setup**: Multiple developers write code in the *same* `dev` sandbox. Code is promoted to `int` (Integration) and then `qa`.
+
+1. **Development**: Developers work on separate feature branches (`feat/TS-01`, `feat/TS-02`) locally but push metadata to the shared `dev` sandbox.
+2. **Story Hand-off**: When developers finish, their branches are merged into a consolidated `release/sprint-1` branch, and the combined code is deployed to the `qa` sandbox.
+3. **QA Testing (Parallel)**: 
+    * Multiple QA testers pull the `release/sprint-1` branch locally.
+    * Tester A runs `/sfspeckit-qa` and `/sfspeckit-e2e-story` against `TS-01`.
+    * Tester B runs `/sfspeckit-qa` and `/sfspeckit-e2e-story` against `TS-02`.
+    * **Committing**: Because they are testing in parallel against the *same* `qa` sandbox, they execute their tests and commit their generated artifacts (`task_story_01_test_scripts.md`, `task_story_01_e2e_results.md`) directly back to the `release/sprint-1` branch. Git handles the merges seamlessly since they are editing different markdown files.
+4. **QA Lead Regression**: Once all testers have committed their passing artifacts, the QA Lead pulls the `release/sprint-1` branch. They run the master `/sfspeckit-e2e-regression` against the QA sandbox to ensure the combined code didn't break anything else in the org. They commit the final `Test_Results_RCA.xlsx`.
+5. **Release**: The Release Manager runs `/sfspeckit-release-notes` on the branch, commits the final Master Dashboard, and the branch is merged to `main`.
+
+### Strategy B: Individual Dev Sandboxes (The Isolated Pipeline)
+**Environment Setup**: Every developer has their own isolated sandbox (`dev1`, `dev2`). Code is promoted to `int`, then `qa`.
+
+1. **Development**: Developer 1 works in `dev1` on branch `feat/TS-01`. They write code and the `task_story_01.md` file, but they *do not* run the E2E framework. They commit their code and push.
+2. **Integration (INT)**: `feat/TS-01` and `feat/TS-02` are merged into the `int` branch and deployed to the `int` sandbox to ensure the code compiles together.
+3. **QA Sandbox**: The `int` branch is promoted to `release/sprint-1` and deployed to the formal `qa` sandbox.
+4. **Formal QA Testing (Generation & Execution)**: 
+    * The QA team checks out `release/sprint-1`.
+    * **Automation**: QA runs `/sfspeckit-e2e-story TS-01`. The AI reads the story, generates the `.test.json` DSL, and executes the test against the `qa` sandbox. 
+    * **Manual**: QA runs `/sfspeckit-qa` to generate manual scripts and executes them in the `qa` sandbox.
+    * **Committing**: QA commits the generated `.test.json` tests, the manual `_test_scripts.md` sign-offs, and the `_results.md` back to the `release/sprint-1` branch. 
+5. **QA Lead Regression**: The QA Lead runs `/sfspeckit-e2e-regression` against the `qa` sandbox, commits the RCA, generates the release notes, and signs off for Production.
+
+---
+
+## 11. CI/CD Integration (GitHub Actions)
+
+Once the JSON tests are generated and committed to the repository by the QA team, they can be executed automatically in your CI/CD pipeline (e.g., GitHub Actions) to prevent regressions on future Pull Requests.
+
+Because SFSpeckit E2E is built on Playwright, it integrates natively into GitHub Actions. Below is a standard `.github/workflows/e2e-regression.yml` configuration:
+
+```yaml
+name: SFSpeckit E2E Regression
+
+on:
+  pull_request:
+    branches: [ main, release/* ]
+
+jobs:
+  test:
+    name: Run Salesforce Playwright Tests
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+
+    - name: Install Dependencies
+      working-directory: .agents/skills/sfspeckit-e2e/framework
+      run: npm ci
+
+    - name: Install Playwright Browsers
+      working-directory: .agents/skills/sfspeckit-e2e/framework
+      run: npx playwright install --with-deps chromium
+
+    - name: Run E2E Regression Suite
+      working-directory: .agents/skills/sfspeckit-e2e/framework
+      env:
+        # Securely inject Server-to-Server JWT credentials from GitHub Secrets
+        SF_USERNAME: ${{ secrets.SF_USERNAME }}
+        SF_CLIENT_ID: ${{ secrets.SF_CLIENT_ID }}
+        SF_LOGIN_URL: ${{ secrets.SF_LOGIN_URL }}
+        SF_JWT_KEY: ${{ secrets.SF_JWT_KEY }} 
+        # Optional: Enable BrowserStack for cloud testing
+        USE_BROWSERSTACK: false 
+      run: npx playwright test executor/json-runner.spec.ts
+
+    - name: Upload RCA Excel Report
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: sfspeckit-rca-report
+        path: .agents/skills/sfspeckit-e2e/framework/reports/Test_Results_RCA.xlsx
+        retention-days: 14
+```
+
+**Key CI/CD Benefits:**
+* **Headless Execution**: The tests run completely headless in the Ubuntu runner.
+* **Secret Injection**: The Salesforce JWT credentials are pulled securely from GitHub Secrets, meaning no passwords are hardcoded in the repo.
+* **Artifact Upload**: If the test fails, the pipeline automatically uploads the `Test_Results_RCA.xlsx` file. Your developers can download it directly from the GitHub Actions UI to see exactly which test failed and the human-readable RCA category.

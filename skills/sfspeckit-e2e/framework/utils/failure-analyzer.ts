@@ -19,6 +19,9 @@ export type FailureCategory =
   | 'PACKAGE'
   | 'FRAMEWORK_LIMITATION'
   | 'DATABASE_MISMATCH'
+  | 'ISOLATION_DATA_CONFLICT'
+  | 'ENVIRONMENT_VIEWPORT'
+  | 'INFRASTRUCTURE_CACHE'
   | 'UNKNOWN';
 
 export interface FailureAnalysis {
@@ -116,6 +119,36 @@ export function classifyFailure(error: unknown, pageText?: string): FailureAnaly
       category: 'PACKAGE',
       message: msg,
       suggestedFix: 'Assign package license to persona or skip package-owned tests.',
+    };
+  }
+
+  // ── Data Isolation Conflict ──────────────────────────────
+  if (/unable_to_lock_row|row lock|unable to obtain exclusive access|concurrent/i.test(combined)) {
+    return {
+      category: 'ISOLATION_DATA_CONFLICT',
+      message: msg,
+      suggestedFix:
+        'Test data is being shared and modified concurrently. Run /sfspeckit-e2e-discover to auto-inject dynamic data isolation.',
+    };
+  }
+
+  // ── Environment Viewport ───────────────────────────────
+  if (/not visible|hidden by|element is outside of the viewport/i.test(combined)) {
+    return {
+      category: 'ENVIRONMENT_VIEWPORT',
+      message: msg,
+      suggestedFix:
+        'Responsive UI issue (likely CI vs local resolution). Run /sfspeckit-e2e-discover to auto-inject scrollTo or viewport adjustment.',
+    };
+  }
+
+  // ── Infrastructure Cache ───────────────────────────────
+  if (/stale element|is detached from dom/i.test(combined)) {
+    return {
+      category: 'INFRASTRUCTURE_CACHE',
+      message: msg,
+      suggestedFix:
+        'Salesforce caching (LWS/Aura) issue causing stale DOM access. Consider adding a reload or cache wait step.',
     };
   }
 

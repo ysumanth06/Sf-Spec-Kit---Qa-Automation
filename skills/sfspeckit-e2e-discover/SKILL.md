@@ -65,7 +65,13 @@ Look for:
 - Changed attribute names or structures
 - Package-specific (namespaced) components
 
-### Step 4: Update Selectors
+### Step 4: Auto-Heal Flaky Tests (If Applicable)
+
+If the test failed due to a Flaky Taxonomy RCA category (e.g., `ISOLATION_DATA_CONFLICT`, `ENVIRONMENT_VIEWPORT`), update the `.test.json` file directly:
+- For **`ISOLATION_DATA_CONFLICT`**: Ensure the test generates unique data (e.g., append `@timestamp` to data fields) instead of sharing static records.
+- For **`ENVIRONMENT_VIEWPORT`**: Inject a `scrollTo` action step or update the element visibility assertions to ensure elements aren't hidden by responsive UI overflow.
+
+### Step 5: Update Selectors
 
 Update `selectors.ts` with corrected or new selectors. Follow these rules:
 - Prefer `getByRole()` and `getByLabel()` (ARIA-based, most stable)
@@ -73,7 +79,7 @@ Update `selectors.ts` with corrected or new selectors. Follow these rules:
 - Use CSS class selectors as last resort (most brittle)
 - Add comments documenting which Salesforce component each selector targets
 
-### Step 5: The Tooling API Spy Agent (For Complex Custom UIs)
+### Step 6: The Tooling API Spy Agent (For Complex Custom UIs)
 
 If the user asks to map a **custom LWC, managed package, or complex UI** (where `selectors.ts` is insufficient):
 
@@ -86,7 +92,7 @@ If the user asks to map a **custom LWC, managed package, or complex UI** (where 
    - It will automatically update `framework/executor/json-runner.spec.ts` to register the new actions (e.g., `"action": "SmartGridPage:fillDiscountPercentage"`).
 3. **Notify the User:** Inform the user that the Page Object was generated and registered, and provide an example of how they can now use the new actions in their JSON tests.
 
-### Step 6 (Optional): Generate Test Script from Verbal Description
+### Step 7 (Optional): Generate Test Script from Verbal Description
 
 If the QA tester says they want to "write a test" or "create a test script":
 
