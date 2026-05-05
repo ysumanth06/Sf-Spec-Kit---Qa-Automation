@@ -17,22 +17,27 @@ QA testers provide natural language or markdown feature stories, the AI generate
 ## 🎯 Key Capabilities
 
 *   **100% Deterministic Execution**: AI doesn't write raw Playwright code, eliminating hallucination risks. It generates safe JSON.
+*   **Runtime Auto-Healing (Smart Retries)**: Intelligently recovers from transient UI issues (hidden viewport elements) and Salesforce database row locks mid-flight using randomized jitter and scroll injections.
+*   **Data Isolation by Design**: Enforces unique, timestamped data boundaries across parallel execution workers to mathematically prevent data conflicts.
 *   **Shadow-DOM Piercing Locators**: Natively tests complex Custom Lightning Web Components (LWCs) without breaking when Salesforce updates SLDS classes.
 *   **Auto-Navigation & Chaos Handlers**: Automatically hunts for fields in hidden tabs and kills Salesforce popups (like Guidance Center) dynamically so tests never flake.
 *   **Iframe Context Engine**: Seamlessly bridges the gap between modern Lightning UI and legacy Visualforce/Setup iframes.
+*   **Cross-Browser Cloud Execution**: Natively integrates with BrowserStack to test Experience Cloud and mobile layouts across real `chrome-cloud`, `safari-cloud`, and `mobile-ios` devices.
 *   **Spy Agent**: A Playwright MCP agent that autonomously logs into custom managed packages (like CPQ or Conga), maps the DOM, and generates bespoke TypeScript Page Objects automatically.
-*   **Data Pollution Prevention**: Automatically provisions test data using `sf data tree import` and natively tracks and hard-deletes all generated dummy data post-execution.
-*   **Native Visual Regression**: Detects pixel-level CSS and styling regressions for free.
+*   **Docs-as-Code Test Management**: Replaces expensive third-party tools like TestRail. The framework natively generates traceability matrices, manual scripts, and auditor-ready Release Notes directly into your Git repository.
+*   **CI/CD Ready**: Fully compatible with GitHub Actions for headless, secure integration testing.
 
 ## 🏆 Head-to-Head vs. Legacy Tools (e.g., Provar)
 
-| Feature | SFSpeckit E2E | Legacy Tools |
-| :--- | :--- | :--- |
-| **Cost** | **$0 (Open Source)** | Expensive Licensing |
-| **Setup Time** | ~30 minutes | Days to Weeks |
-| **Test Authoring** | AI + JSON DSL (Instant) | Manual / Record & Playback |
-| **Data Clean-up** | Fully Automated | Manual Configuration |
-| **Visual Regression**| Built-in (Free) | Paid Add-ons |
+| Feature / Dimension | SFSpeckit E2E | Legacy Tools | Winner |
+| :--- | :--- | :--- | :--- |
+| **Cost** | **$0 (Open Source)** | Expensive Licensing | 🏆 SFSpeckit |
+| **Setup Time** | ~30 minutes | Days to Weeks | 🏆 SFSpeckit |
+| **Test Authoring** | AI + JSON DSL (Instant) | Manual / Record & Playback | 🏆 SFSpeckit |
+| **Data Management** | Data Tree Import + CSV | CSV / Excel Data Mapping | 🏆 SFSpeckit |
+| **CI/CD Integration**| Native Playwright (Fast) | Heavy CLI | 🏆 SFSpeckit |
+| **Cross-Browser/Mobile**| Native BrowserStack Cloud | Complex remote node setup | 🏆 SFSpeckit |
+| **Salesforce Coverage**| 100% (Spy Agent + Iframes) | 100% (Full platform) | 🤝 Tie |
 
 ## 🛠 Getting Started
 
@@ -61,6 +66,6 @@ npm run qa:doctor
 
 ## 📖 Comprehensive Documentation
 
-For a deep dive into the repository structure, how to configure Personas and QA Domains, and how to utilize the 4 AI Testing Modes (`story`, `baseline`, `regression`, `discover`), please read the full Technical Architecture guide:
+For a deep dive into the repository structure, how to configure Personas, how to utilize the 4 AI Testing Modes (`story`, `baseline`, `regression`, `discover`), and how to set up GitHub Actions, please read the full Technical Architecture guide:
 
 👉 [**SFSpeckit E2E Technical Architecture & User Guide**](./sfspeckit_e2e_technical_architecture.md)
