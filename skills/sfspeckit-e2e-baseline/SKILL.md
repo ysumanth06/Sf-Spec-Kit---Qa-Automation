@@ -90,7 +90,13 @@ For **each object**:
 
 Save to: `framework/tests/baseline/<object-name>.test.json`
 
-### Step 4: Report Summary
+### Step 4: Execute Data Tree Seeder (For Empty Orgs)
+
+If the baseline tests will be run in a fresh scratch org or a newly refreshed sandbox, the org will lack the foundational records needed for the tests.
+- Inform the user that data seeding is recommended for empty environments.
+- Suggest invoking `utils/data-tree-seeder.ts` with the appropriate JSON data plan before running `/sfspeckit-e2e-regression`.
+
+### Step 5: Report Summary
 
 Output to the user:
 - Number of objects scanned

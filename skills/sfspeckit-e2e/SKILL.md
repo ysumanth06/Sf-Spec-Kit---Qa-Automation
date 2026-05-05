@@ -137,6 +137,8 @@ All 4 skills generate tests conforming to this exact schema. The sub-skills refe
 | `flowNext` | — | Click Next in a Screen Flow |
 | `flowPrevious` | — | Click Previous in a Screen Flow |
 | `flowFinish` | — | Click Finish in a Screen Flow |
+| `extractValue` | `target`, `variable` | Extract text from a UI element and store it in context (e.g., `@orderId`) |
+| `if` | `condition`, `steps` | Execute nested steps conditionally based on page state |
 
 > **Step Retry**: Actions like `selectPicklist`, `fillLookup`, `assertToast`, and navigation actions automatically retry with exponential backoff. Override with a `"retries"` field per step.
 
@@ -181,18 +183,19 @@ framework/
 ├── tests/
 │   ├── baseline/              ← Generated baseline tests
 │   └── stories/               ← Generated story tests
-└── utils/
-    ├── auth.ts                ← JWT + cookie authentication
-    ├── cleanup.ts             ← QA data cleanup CLI
-    ├── doctor.ts              ← Environment health check CLI
-    ├── failure-analyzer.ts    ← RCA classification (12 categories)
-    ├── global-teardown.ts     ← Playwright global teardown (auto-cleanup)
-    ├── internal-metadata-scanner.ts ← Org metadata scanner
-    ├── internal-soql-verifier.ts    ← Database verification
-    ├── popup-handler.ts       ← Session/tour/consent dismissal
-    ├── selectors.ts           ← Salesforce Lightning + Dynamic Forms selectors
-    ├── sf-helpers.ts          ← Network interception + worker-aware QA prefix
-    └── test-data.ts           ← Test record lifecycle (SOQL-injection safe)
+├── utils/
+│   ├── auth.ts                ← JWT + cookie authentication
+│   ├── cleanup.ts             ← QA data cleanup CLI
+│   ├── data-tree-seeder.ts    ← Native sf data tree import utility for automated E2E data seeding
+│   ├── doctor.ts              ← Environment health check CLI
+│   ├── failure-analyzer.ts    ← RCA classification (12 categories)
+│   ├── global-teardown.ts     ← Playwright global teardown (auto-cleanup)
+│   ├── internal-metadata-scanner.ts ← Org metadata scanner
+│   ├── internal-soql-verifier.ts    ← Database verification
+│   ├── popup-handler.ts       ← Session/tour/consent dismissal
+│   ├── selectors.ts           ← Salesforce Lightning + Dynamic Forms selectors
+│   ├── sf-helpers.ts          ← Network interception + worker-aware QA prefix
+│   └── test-data.ts           ← Test record lifecycle (SOQL-injection safe)
 ```
 
 ## Notes
@@ -201,3 +204,4 @@ framework/
 - All test data records MUST be prefixed with the `QA_PREFIX` from `.env` for cleanup.
 - The `verifyDatabase` action uses `sf data query` CLI under the hood.
 - For managed package UIs (Conga, CPQ), use `/sfspeckit-e2e-discover` first to map selectors before writing story tests.
+- Baseline tests running in fresh scratch orgs rely on `data-tree-seeder.ts` to provision foundational records prior to UI automation execution.

@@ -11,8 +11,8 @@ Unlike traditional testing frameworks that require developers to write fragile s
 We built specific architectural defenses to handle the complexity of Salesforce. Here is why we made these choices and the exact problems they solve:
 
 ### Defense 1: The JSON Action Engine (Stability over Hallucinations)
-*   **The Problem:** Asking an AI to write raw Playwright code (`await page.locator(...).click()`) often results in syntax errors, missing `await` statements, or hallucinated methods that don't exist.
-*   **The Solution:** The AI writes a strict JSON format (e.g., `{"action": "clickSave"}`). A static, human-written Playwright engine (`json-runner.spec.ts`) reads this JSON and safely executes it.
+*   **The Problem:** Asking an AI to write raw Playwright code (`await page.locator(...).click()`) often results in syntax errors, missing `await` statements, or hallucinated methods that don't exist. Furthermore, hardcoded scripts struggle with complex conditional flows.
+*   **The Solution:** The AI writes a strict JSON format (e.g., `{"action": "clickSave"}`). This JSON DSL has been enhanced to support enterprise logic like dynamic variable extraction (`extractValue`) and conditional control flows (`if/else` blocks). A static, human-written Playwright engine (`json-runner.spec.ts`) reads this JSON and safely executes it.
 *   **What it solves:** Test execution is 100% deterministic. The AI handles the "what to test" (logic), and the hardened engine handles the "how to click it" (execution).
 
 **Visual Comparison:**
@@ -20,14 +20,17 @@ We built specific architectural defenses to handle the complexity of Salesforce.
 ```typescript
 // AI Hallucination Risk
 await page.locator('lightning-input[data-name="Amount"]').fill('500');
+const orderId = await page.locator('.order-id').innerText();
 await page.locator('button[title="Save"]').click();
 ```
-*The AI generates a strict, safe JSON DSL:*
+*The AI generates a strict, safe, stateful JSON DSL:*
 ```json
 // Safe, Deterministic JSON DSL
 "steps": [
   { "action": "fill", "target": "Amount", "value": "500" },
-  { "action": "clickSave" }
+  { "action": "extractValue", "target": "Order ID", "variable": "@orderId" },
+  { "action": "clickSave" },
+  { "if": "toastVisible", "steps": [ { "action": "clickClose" } ] }
 ]
 ```
 
@@ -49,9 +52,9 @@ await page.locator('button[title="Save"]').click();
 *   **The Problem:** Custom LWCs and Managed Packages have unpredictable UIs. Writing page objects for them is a slow, manual engineering task.
 *   **The Solution:** An autonomous Playwright MCP agent logs into the UI, recursively pierces the DOM, extracts interactive elements, and *automatically writes a bespoke TypeScript Page Object*. 
 
-### Defense 6: Data Pollution & Isolation (The Clean Org Guarantee)
-*   **The Problem:** E2E testing frameworks quickly pollute testing environments with junk records. Furthermore, running tests in parallel causes `UNABLE_TO_LOCK_ROW` collisions when tests fight over the same static data (e.g., "QA-Test Account").
-*   **The Solution:** The framework enforces strict **Data Isolation by Design**. The JSON generators mandate dynamic timestamps (`{{QA_PREFIX}}-{{@timestamp}}`) for all unique data creation. A built-in cleanup utility (`npm run qa:cleanup`) automatically tracks and hard-deletes all generated data immediately after the test suite finishes.
+### Defense 6: Data Pollution, Isolation & Native Seeding
+*   **The Problem:** E2E testing frameworks quickly pollute testing environments with junk records. Running tests in parallel causes `UNABLE_TO_LOCK_ROW` collisions when tests fight over the same static data. Furthermore, baseline UI tests immediately fail in newly refreshed sandboxes or ephemeral scratch orgs if foundational records do not exist.
+*   **The Solution:** The framework enforces strict **Data Isolation by Design**. The JSON generators mandate dynamic timestamps (`{{QA_PREFIX}}-{{@timestamp}}`) for all unique data creation. A built-in cleanup utility (`npm run qa:cleanup`) automatically hard-deletes all generated data immediately after the test suite finishes. For empty orgs, the native `data-tree-seeder.ts` utility programmatically loads relational foundational data using the Salesforce CLI before the UI automation begins, completely removing the need for expensive third-party seeding tools like Snowfakery.
 
 ### Defense 7: Native Visual Regression Testing
 *   **The Problem:** CSS and styling regressions (like a button moving 10 pixels to the left, or a font color changing) are impossible to catch with standard click-and-assert testing.
@@ -167,6 +170,7 @@ The framework is cleanly encapsulated inside `.agents/skills/sfspeckit-e2e/`.
     └── utils/
         ├── auth.ts                       # Handles secure JWT authentication and cookie session bypass.
         ├── cleanup.ts                    # CLI tool to securely delete test data after runs.
+        ├── data-tree-seeder.ts           # Native sf data tree import utility for empty org seeding.
         ├── data-factory.ts               # Hooks into `sf data tree` to build complex parent/child records.
         ├── doctor.ts                     # CLI environment health checker.
         ├── failure-analyzer.ts           # Analyzes errors and maps them to RCA categories (e.g., "UI Timeout").
@@ -180,7 +184,7 @@ The framework is cleanly encapsulated inside `.agents/skills/sfspeckit-e2e/`.
 
 | File Path | What It Does (Explanation) | Why It Was Created |
 | :--- | :--- | :--- |
-| **`SKILL.md`** | Master AI Instructions. Defines the 4 modes, the JSON DSL schema, and the 28 allowed action verbs. | To strictly constrain the AI from hallucinating code and ensure it only generates valid JSON tests. |
+| **`SKILL.md`** | Master AI Instructions. Defines the 4 modes, the JSON DSL schema, and the allowed action verbs. | To strictly constrain the AI from hallucinating code and ensure it only generates valid JSON tests. |
 | **`scoring-rubric.md`** | A 150-point quality gate for test evaluation. | To enforce enterprise standards (like ensuring every test cleans up after itself). |
 | **`framework/.env`** | Stores the Salesforce server-to-server JWT credentials. | To enable headless, password-less CI/CD authentication without locking accounts. |
 | **`framework/domains.json`** | Defines custom object clusters (e.g., grouping `Account`, `Opportunity` into "Sales"). | Allows QA to run targeted regression tests on specific business domains instead of scanning the whole org. |
@@ -195,6 +199,7 @@ The framework is cleanly encapsulated inside `.agents/skills/sfspeckit-e2e/`.
 | **`reporters/rca-excel-reporter.ts`** | Generates an Excel triage report with categorized failures after a test run. | To provide non-technical QA managers with a business-readable Pass/Fail spreadsheet. |
 | **`utils/auth.ts`** | Handles the secure JWT authentication and cookie session bypass. | Bypasses the slow Salesforce login screen by directly injecting session cookies. |
 | **`utils/cleanup.ts`** | CLI tool to securely delete test data after runs. | Prevents the testing environment from becoming polluted with thousands of dummy records. |
+| **`utils/data-tree-seeder.ts`**| Native `sf data tree import` utility. | Seeds empty environments (like scratch orgs) with foundational relational records before UI automation tests run. |
 | **`utils/data-factory.ts`** | Hooks into the `sf data tree` command to build complex parent/child records instantly. | Removes the need for slow UI-based data creation; builds complex data structures in milliseconds via API. |
 | **`utils/failure-analyzer.ts`** | Intercepts stack traces and maps them to human-readable RCA categories (e.g., "UI Timeout"). | Stops QA from having to read code errors; tells them exactly what went wrong in plain English. |
 | **`utils/internal-metadata-scanner.ts`**| Parses org metadata to map dependencies like which triggers fire on which objects. | Allows the framework to know *what else* might break when a change is made to an object. |
@@ -232,14 +237,15 @@ The process is entirely automated and headless by default. Here is the exact phy
 1. You run: `/sfspeckit-e2e-baseline for Account and Contact`
 2. The `baseline-scanner.ts` looks at your Salesforce org's metadata.
 3. It maps all dependencies (Validation Rules, Record Types, Child Objects).
-4. It generates hundreds of JSON tests for standard CRUD operations and saves them to `tests/baseline/`.
+4. It invokes `data-tree-seeder.ts` if the target org is empty to ensure baseline records exist.
+5. It generates hundreds of JSON tests for standard CRUD operations and saves them to `tests/baseline/`.
 
 ### Mode 3: Full Regression (`/sfspeckit-e2e-regression`)
-**Goal:** Run the entire test suite to ensure nothing is broken before a release.
+**Goal:** Run the entire test suite to ensure nothing is broken before a release, or isolate tests after a vendor package upgrade.
 **How it works:**
-1. You run: `/sfspeckit-e2e-regression`
+1. You run: `/sfspeckit-e2e-regression` (or `/sfspeckit-e2e-regression package upgrade mode for CPQ`)
 2. Playwright spins up multiple parallel browser workers.
-3. It executes every JSON test across all personas.
+3. It executes every JSON test across all personas. If **Package Upgrade Mode** is used, it isolates execution strictly to tests tagged with the specified vendor namespace to rapidly triage vendor-induced breaking changes.
 4. Generates a master HTML report and the Root Cause Analysis (RCA) Excel file.
 
 ### Mode 4: UI Discovery & Selector Refresh (`/sfspeckit-e2e-discover`)

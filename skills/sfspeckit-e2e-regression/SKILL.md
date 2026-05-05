@@ -33,7 +33,11 @@ Optional filters:
 /sfspeckit-e2e-regression baseline only
 /sfspeckit-e2e-regression stories only
 /sfspeckit-e2e-regression for Admin persona only
+/sfspeckit-e2e-regression package upgrade mode for namespace [Namespace]
 ```
+
+### Package Upgrade Mode
+When a managed package (e.g., CPQ, Conga) is upgraded, it may break existing locators or workflows. You can isolate regression testing strictly to tests tagged with the package namespace to quickly identify breaking changes introduced by the vendor.
 
 ## Execution Steps
 
@@ -59,6 +63,9 @@ E2E_TEST_FILE=baseline npx playwright test executor/json-runner.spec.ts
 
 # Specific persona only
 npx playwright test executor/json-runner.spec.ts --project "Admin"
+
+# Package Upgrade Mode (isolate by namespace)
+E2E_NAMESPACE=[Namespace] npx playwright test executor/json-runner.spec.ts
 
 # Headed mode (visible browser)
 npx playwright test executor/json-runner.spec.ts --headed
