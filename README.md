@@ -24,6 +24,7 @@ QA testers provide natural language or markdown feature stories, the AI generate
 *   **Iframe Context Engine**: Seamlessly bridges the gap between modern Lightning UI and legacy Visualforce/Setup iframes.
 *   **Cross-Browser Cloud Execution**: Natively integrates with BrowserStack to test Experience Cloud and mobile layouts across real `chrome-cloud`, `safari-cloud`, and `mobile-ios` devices.
 *   **Spy Agent**: A Playwright MCP agent that autonomously logs into custom managed packages (like CPQ or Conga), maps the DOM, and generates bespoke TypeScript Page Objects automatically.
+*   **Playwright Codegen Integration**: Automatically captures undocumented legacy business processes using Playwright's native Record & Playback tool. Bypasses MFA/SSO securely via JWT and translates raw clicks into the safe SFSpeckit JSON DSL.
 *   **Docs-as-Code Test Management**: Replaces expensive third-party tools like TestRail. The framework natively generates traceability matrices, manual scripts, and auditor-ready Release Notes directly into your Git repository.
 *   **CI/CD Ready**: Fully compatible with GitHub Actions for headless, secure integration testing.
 
