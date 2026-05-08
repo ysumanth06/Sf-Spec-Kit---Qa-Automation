@@ -100,14 +100,25 @@ If the user asks to map a **custom LWC, managed package, or complex UI** (where 
    - It will automatically update `framework/executor/json-runner.spec.ts` to register the new actions (e.g., `"action": "SmartGridPage:fillDiscountPercentage"`).
 3. **Notify the User:** Inform the user that the Page Object was generated and registered, and provide an example of how they can now use the new actions in their JSON tests.
 
-### Step 8 (Optional): Generate Test Script from Verbal Description
+### Step 8: Capturing Legacy Business Processes (Test Generation)
 
-If the QA tester says they want to "write a test" or "create a test script":
+If the QA tester wants to "write a test" or "create a test script" for an existing legacy flow, use one of the following methods depending on their prompt:
 
-1. Ask the QA tester to describe what they want to test step by step
-2. As they describe each step, map it to the live DOM elements visible in the snapshot
-3. Generate a `.test.json` file using the JSON DSL actions
-4. Save to `framework/tests/stories/<descriptive-name>.test.json`
+#### Option 1: The "Show and Tell" Method (Verbal Description)
+If the QA tester wants to verbally describe the steps (e.g., "I'll describe the steps to you"):
+1. Ask the QA tester to describe what they want to test step by step.
+2. As they describe each step, map it to the live DOM elements visible in the snapshot.
+3. Generate a `.test.json` file using the JSON DSL actions.
+4. Save to `framework/tests/stories/<descriptive-name>.test.json`.
+
+#### Option 2: Record and Playback (Codegen)
+If the QA tester asks to "record the process" or "use the recorder":
+1. Automatically execute the following command in the background for the requested persona (default to Admin):
+   `cd .agents/skills/sfspeckit-e2e/framework && npm run qa:codegen <PersonaName>`
+2. This will open the Playwright Codegen recorder on the tester's screen, pre-authenticated into Salesforce.
+3. Instruct the QA tester to click through the process in the browser, copy the generated code from the Playwright Inspector, and paste it into the chat when they are done.
+4. Once they paste the raw Playwright code, translate those actions into a standard `.test.json` file using the SFSpeckit JSON DSL.
+5. Save to `framework/tests/stories/<descriptive-name>.test.json`.
 
 > **CRITICAL**: Generate ONLY `.test.json` files. NEVER generate raw `.spec.ts` TypeScript.
 

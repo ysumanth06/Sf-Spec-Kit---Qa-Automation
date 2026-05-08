@@ -10,6 +10,7 @@
     "qa:run:debug": "playwright test executor/json-runner.spec.ts --debug",
     "qa:report": "playwright show-report reports/html",
     "qa:baseline": "tsx generators/baseline-scanner.ts",
+    "qa:codegen": "tsx utils/codegen.ts",
     "qa:cleanup": "tsx utils/cleanup.ts",
     "test": "playwright test",
     "test:headed": "playwright test --headed"

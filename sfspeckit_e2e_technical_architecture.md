@@ -115,18 +115,48 @@ Download the necessary browser binaries used by Playwright:
 npx playwright install chromium
 ```
 
-**Step 3: Environment Configuration**
-Copy the `.env.example` file to create a `.env` file. You will need your Salesforce Admin to provide the Server-to-Server JWT integration details.
-```env
-SF_USERNAME=qa-automation@yourdomain.com
-SF_CLIENT_ID=your_connected_app_client_id
-SF_LOGIN_URL=https://test.salesforce.com
-SF_JWT_KEY_FILE=./certs/server.key
-```
+**Step 3: Salesforce JWT Authentication Setup (Admin Required)**
+The framework bypasses standard Salesforce UI logins (which get blocked by SSO or MFA) by using a headless **JWT Bearer Flow**. To set this up, the System Administrator must:
 
-**Step 4: Define Personas and Domains**
-*   **`personas.json`**: Define the different user profiles the tests will log in as (e.g., Sales Rep, Support Agent).
-*   **`domains.json`**: Define QA test clusters (e.g., grouping `Account`, `Opportunity`, and `Quote` under "Sales").
+1. **Create the Digital Certificate**: Generate a `server.key` and `server.crt` file. Store the `server.key` securely in `.agents/skills/sfspeckit-e2e/framework/certs/`.
+2. **Create the Connected App**: In Salesforce Setup, create a new Connected App (or External Client App) with "Enable OAuth Settings" turned on. Check "Use digital signatures" and upload your `server.crt`.
+3. **Pre-Authorize Users**: Under the Connected App's "Manage Policies", set Permitted Users to **"Admin approved users are pre-authorized"**.
+4. **Assign Profiles**: In the Connected App's "Manage Profiles" related list, add the specific Profiles you intend to test (e.g., System Administrator, Sales Representative).
+
+**Step 4: Create Test Users and Define Personas**
+Playwright cannot impersonate a profile out of thin air. It physically requires an active User record in the Salesforce database to generate a session.
+
+1. **Create Test Users in Salesforce**: For every persona you want to test (e.g., "Sales Rep"), create a dummy User record in your QA sandbox. Assign them to the "Sales Representative" profile (which you pre-authorized in Step 3).
+   * *Example Username*: `test.salesrep@smartgrid.com.qa`
+2. **Environment Configuration (`.env`)**: Copy `.env.example` to `.env` and fill in the Connected App details:
+```env
+QA_PREFIX=JDOE
+E2E_AUTH_MODE=jwt
+E2E_JWT_CLIENT_ID=3MVG9...your_connected_app_client_id
+E2E_JWT_KEY_FILE=certs/server.key
+E2E_JWT_INSTANCE_URL=https://company--qa.sandbox.my.salesforce.com
+```
+3. **Define Personas (`personas.json`)**: Map your human-readable Persona names to the exact Salesforce Usernames you just created:
+```json
+{
+  "personas": [
+    {
+      "name": "Admin",
+      "username": "qa.admin@smartgrid.com.qa",
+      "expected": { "profile": "System Administrator" }
+    },
+    {
+      "name": "Sales Rep",
+      "username": "test.salesrep@smartgrid.com.qa",
+      "expected": { "profile": "Sales Representative", "role": "Eastern Sales" }
+    }
+  ]
+}
+```
+*Note: The framework uses the `username` to silently request an API token, injects the token into Playwright's cookies, and completely bypasses SSO/MFA.*
+
+**Step 4.5: Define Domains (`domains.json`)**
+*   Define QA test clusters (e.g., grouping `Account`, `Opportunity`, and `Quote` under "Sales").
 
 **Step 5: Run the Health Check**
 Run the internal doctor utility to ensure everything is configured correctly:
@@ -284,6 +314,17 @@ Use keywords like **heal**, **isolate**, or **fix flaky** to address tests that 
 *   `/e2e-discover heal the flaky test that failed due to row lock`
 
 **What it does:** It intelligently targets the `.test.json` DSL file instead of the selectors. For data conflicts, it auto-injects dynamic `@timestamp` prefixes to test data to ensure isolation. For viewport issues, it injects explicit scroll commands into the DSL.
+
+#### 5. To Capture Legacy Business Processes (Record & Playback)
+Use keywords like **record**, **capture**, or **codegen** to generate test scripts for existing brownfield org processes without writing code.
+
+*   `/e2e-discover record the legacy Lead Conversion process for the Sales Rep persona`
+*   `/e2e-discover use the recorder to capture the Opportunity flow`
+
+**What it does:** 
+You have two options for capturing existing processes:
+1. **Option 1 (Show and Tell):** Tell the AI "I will describe the steps to you." The AI opens the browser, and as you type instructions ("Click the New button", "Fill in the Amount"), the AI translates them directly into JSON DSL.
+2. **Option 2 (Playwright Codegen):** When you ask the AI to "record" the process, the AI natively executes `npm run qa:codegen <Persona>` in the background. It uses the API token to bypass MFA/SSO and pops open the Playwright Recorder pre-authenticated. You simply click through Salesforce normally, copy the generated Playwright code, paste it back to the AI, and it converts it into the safe SFSpeckit JSON DSL.
 
 > **Pro-Tip:** Because it's an AI agent, it's very forgiving. If you just paste in the error from your RCA Excel report like: `/e2e-discover test failed due to UI/DOM Timeout on clickSave for Opportunity`, it will instantly know it needs to run a repair on that specific locator!
 
