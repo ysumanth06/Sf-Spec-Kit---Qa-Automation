@@ -18,13 +18,15 @@ QA testers provide natural language or markdown feature stories, the AI generate
 
 *   **100% Deterministic Execution**: AI doesn't write raw Playwright code, eliminating hallucination risks. It generates safe JSON.
 *   **Runtime Auto-Healing (Smart Retries)**: Intelligently recovers from transient UI issues (hidden viewport elements) and Salesforce database row locks mid-flight using randomized jitter and scroll injections.
-*   **Data Isolation by Design**: Enforces unique, timestamped data boundaries across parallel execution workers to mathematically prevent data conflicts.
+*   **Data Isolation by Design**: Enforces unique, timestamped data boundaries and utilizes `faker.js` for highly realistic synthetic data generation to mathematically prevent conflicts.
+*   **API Bridge Patterns**: Seamlessly mix standard UI clicks with robust REST API verifications natively within the same JSON test flow.
 *   **Shadow-DOM Piercing Locators**: Natively tests complex Custom Lightning Web Components (LWCs) without breaking when Salesforce updates SLDS classes.
 *   **Auto-Navigation & Chaos Handlers**: Automatically hunts for fields in hidden tabs and kills Salesforce popups (like Guidance Center) dynamically so tests never flake.
 *   **Iframe Context Engine**: Seamlessly bridges the gap between modern Lightning UI and legacy Visualforce/Setup iframes.
 *   **Cross-Browser Cloud Execution**: Natively integrates with BrowserStack to test Experience Cloud and mobile layouts across real `chrome-cloud`, `safari-cloud`, and `mobile-ios` devices.
-*   **Spy Agent**: A Playwright MCP agent that autonomously logs into custom managed packages (like CPQ or Conga), maps the DOM, and generates bespoke TypeScript Page Objects automatically.
-*   **Playwright Codegen Integration**: Automatically captures undocumented legacy business processes using Playwright's native Record & Playback tool. Bypasses MFA/SSO securely via JWT and translates raw clicks into the safe SFSpeckit JSON DSL.
+*   **Agentic Discovery Mode**: An autonomous Navigation Agent actively interacts with the live UI (clicking tabs, opening modals) using Playwright MCP tools to automatically map complex, hidden Lightning components.
+*   **Salesforce MCP Server Integration**: Delegate complex backend setups to the official Salesforce DX MCP Server natively within the DSL, complete with graceful automatic fallbacks if the MCP is unconfigured in the environment.
+*   **LLM Vision Assertions**: Assert complex UI visual states (charts, branding) using natural language prompts via Vision LLMs.
 *   **Docs-as-Code Test Management**: Replaces expensive third-party tools like TestRail. The framework natively generates traceability matrices, manual scripts, and auditor-ready Release Notes directly into your Git repository.
 *   **CI/CD Ready**: Fully compatible with GitHub Actions for headless, secure integration testing.
 

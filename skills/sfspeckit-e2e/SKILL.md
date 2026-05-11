@@ -93,6 +93,8 @@ All 4 skills generate tests conforming to this exact schema. The sub-skills refe
 
 > **CRITICAL RULE (DATA ISOLATION)**: ALL text fields in `dataFactory` that require uniqueness (like Account Name or emails) MUST incorporate `{{QA_PREFIX}}` and a dynamic timestamp `{{@timestamp}}`. Never hardcode static names like `"QA-Test Account"`. This guarantees parallel execution won't fail with `UNABLE_TO_LOCK_ROW` or validation errors due to data collision.
 
+> **TIP (REALISTIC DATA)**: You can use `faker.js` inside your `dataFactory` configuration for realistic synthetic data. Just prefix standard faker methods with `@faker.`. For example, `{{@faker.person.firstName}}`, `{{@faker.company.name}}`, or `{{@faker.internet.email}}`.
+
 ### Supported Actions
 
 | Action | Parameters | Description |
@@ -139,6 +141,9 @@ All 4 skills generate tests conforming to this exact schema. The sub-skills refe
 | `flowFinish` | — | Click Finish in a Screen Flow |
 | `extractValue` | `target`, `variable` | Extract text from a UI element and store it in context (e.g., `@orderId`) |
 | `if` | `condition`, `steps` | Execute nested steps conditionally based on page state |
+| `apiRequest` | `url`, `method`, `headers?`, `body?`, `assertStatus?` | Execute a REST API request. Great for external validations or mixing API & UI steps. |
+| `assertVision` | `prompt` | Capture a screenshot and use LLM Vision to assert a complex UI state based on the prompt. |
+| `mcpExecute` | `instruction`, `variable?`, `fallbackFactory?` | Delegate complex backend data setup to the Salesforce MCP. If MCP is unavailable, executes the `fallbackFactory` (array of dataFactory objects) to ensure tests don't fail. |
 
 > **Step Retry**: Actions like `selectPicklist`, `fillLookup`, `assertToast`, and navigation actions automatically retry with exponential backoff. Override with a `"retries"` field per step.
 

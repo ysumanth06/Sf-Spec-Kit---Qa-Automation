@@ -47,13 +47,13 @@ Use Playwright MCP tools to:
 
 The QA tester should see the browser open on their screen.
 
-### Step 2: Capture DOM Snapshot
+### Step 2: Agentic Discovery Mode (Navigation Agent)
 
-Use `browser_snapshot` to capture the current page structure. This provides:
-- All visible elements with their roles and labels
-- ARIA attributes for accessibility selectors
-- Data attributes used by Lightning components
-- Form field labels and input types
+Instead of relying solely on static DOM snapshots or manual QA intervention, you will operate as an autonomous **Navigation Agent**.
+1. Use Playwright MCP tools (`browser_snapshot`, `browser_action`, `browser_navigate`) to actively explore and interact with the page.
+2. When mapping a new component (like a custom LWC), autonomously click through tabs, open modals, and expand accordions to expose hidden DOM elements.
+3. Capture the DOM state, identify the roles/labels for each newly discovered interactive element, and map their state transitions.
+4. Synthesize your findings into a sequence of JSON DSL steps required to automate the flow.
 
 ### Step 3: Identify Broken Selectors
 

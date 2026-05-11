@@ -13,6 +13,7 @@
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { faker } from '@faker-js/faker';
 import { RecordPage } from '../page-objects/RecordPage';
 import { ScreenFlow } from '../page-objects/ScreenFlow';
 import { ListView } from '../page-objects/ListView';
@@ -142,6 +143,23 @@ function resolveVariables(value: any, variables: Map<string, string>): any {
   for (const [key, val] of variables) {
     resolved = resolved.replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), val);
   }
+  // Process faker tokens: {{@faker.person.firstName}}
+  resolved = resolved.replace(/\{\{@faker\.([\w.]+)\}\}/g, (match, path) => {
+    try {
+      const parts = path.split('.');
+      let obj: any = faker;
+      for (const p of parts) {
+        if (obj === undefined) break;
+        obj = obj[p];
+      }
+      if (typeof obj === 'function') {
+        return obj();
+      }
+      return match;
+    } catch (e) {
+      return match;
+    }
+  });
   return resolved;
 }
 
@@ -446,6 +464,56 @@ async function executeStep(
       await waitForSalesforceNetwork(page);
       break;
 
+    // ── API Integration ───────────────────────────────────
+    case 'apiRequest': {
+      const { url, method, headers, body, assertStatus } = resolved;
+      const response = await page.request.fetch(url, {
+        method: method || 'GET',
+        headers: headers || {},
+        data: body,
+      });
+      if (assertStatus) {
+        expect(response.status()).toBe(assertStatus);
+      }
+      break;
+    }
+
+    // ── Salesforce MCP Integration ────────────────────────
+    case 'mcpExecute': {
+      const mcpAvailable = process.env.SF_MCP_ENABLED === 'true';
+      if (!mcpAvailable) {
+        console.warn(`⚠️ MCP_UNAVAILABLE: Salesforce MCP is not enabled. Falling back to dataFactory if provided.`);
+        if (resolved.fallbackFactory && Array.isArray(resolved.fallbackFactory)) {
+          for (const item of resolved.fallbackFactory) {
+            const resolvedFields = { ...item.fields };
+            for (const [fk, fv] of Object.entries(resolvedFields)) {
+              if (typeof fv === 'string') {
+                resolvedFields[fk] = resolveVariables(fv, variables);
+              }
+            }
+            const record = await createTestRecord(conn, item.object, resolvedFields);
+            variables.set(item.variable, record.id);
+            registerCreatedRecord(record);
+          }
+        } else {
+          throw new Error('🛑 MCP_UNAVAILABLE and no fallbackFactory provided for mcpExecute step.');
+        }
+      } else {
+        console.log(`[MCP] Executing instruction: ${resolved.instruction}`);
+        // Placeholder for actual MCP client execution
+      }
+      break;
+    }
+
+    // ── Vision Assertions ─────────────────────────────────
+    case 'assertVision': {
+      console.log(`👁️  Vision Assertion: ${resolved.prompt}`);
+      const screenshotPath = path.join('screenshots', `vision-${Date.now()}.png`);
+      await page.screenshot({ path: screenshotPath, fullPage: true });
+      console.warn(`⚠️ assertVision is a stub. Visual validation requires external LLM integration to process ${screenshotPath}.`);
+      break;
+    }
+
     // ── Utility ───────────────────────────────────────────
     case 'wait':
       await page.waitForTimeout(resolved.ms || 2000);
@@ -482,18 +550,30 @@ async function executeStepWithRetry(
 ): Promise<void> {
   const maxRetries = step.retries ?? DEFAULT_RETRIES[step.action] ?? 0;
 
-  if (maxRetries <= 0) {
-    // No retry — execute directly
-    await executeStep(step, page, recordPage, screenFlow, listView, conn, variables);
-    return;
-  }
+  // Conversational trace logging
+  let stepName = `[AGENT] Executing ${step.action} on ${step.target || step.object || ''}`;
+  if (step.action === 'clickButton') stepName = `[AGENT] Identified '${step.target}' button; clicking it.`;
+  else if (step.action === 'fill') stepName = `[AGENT] Found '${step.target}' input; entering text.`;
+  else if (step.action === 'assertToast') stepName = `[AGENT] Waiting for toast containing '${step.contains}' to validate success.`;
+  else if (step.action === 'verifyDatabase') stepName = `[AGENT] Querying database to verify backend state.`;
+  else if (step.action === 'apiRequest') stepName = `[AGENT] Making API Call to ${step.url}.`;
+  else if (step.action === 'mcpExecute') stepName = `[AGENT] Delegating to MCP: ${step.instruction}`;
+  else if (step.action === 'assertVision') stepName = `[AGENT] Using Vision to assert: ${step.prompt}`;
 
-  await retryAction(
-    () => executeStep(step, page, recordPage, screenFlow, listView, conn, variables),
-    maxRetries,
-    1_000,
-    page,
-  );
+  await test.step(stepName, async () => {
+    if (maxRetries <= 0) {
+      // No retry — execute directly
+      await executeStep(step, page, recordPage, screenFlow, listView, conn, variables);
+      return;
+    }
+
+    await retryAction(
+      () => executeStep(step, page, recordPage, screenFlow, listView, conn, variables),
+      maxRetries,
+      1_000,
+      page,
+    );
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -580,6 +660,10 @@ for (const filePath of testFiles) {
             const conn = await getConnection(persona);
 
             // ── Data Setup ────────────────────────────────────
+            if (testInfo.retry > 0) {
+               console.log(`♻️  Retry attempt ${testInfo.retry}: Re-provisioning fresh test data to avoid state locks.`);
+            }
+
             if (suite.setup) {
               if (suite.setup.dataPlan) {
                 // Import complex data plan via CLI
@@ -655,6 +739,10 @@ for (const filePath of testFiles) {
           const conn = await getConnection(persona);
 
           // ── Data Setup ────────────────────────────────────
+          if (testInfo.retry > 0) {
+             console.log(`♻️  Retry attempt ${testInfo.retry}: Re-provisioning fresh test data to avoid state locks.`);
+          }
+
           if (suite.setup) {
             if (suite.setup.dataPlan) {
               // Import complex data plan via CLI

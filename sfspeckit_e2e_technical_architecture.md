@@ -12,7 +12,7 @@ We built specific architectural defenses to handle the complexity of Salesforce.
 
 ### Defense 1: The JSON Action Engine (Stability over Hallucinations)
 *   **The Problem:** Asking an AI to write raw Playwright code (`await page.locator(...).click()`) often results in syntax errors, missing `await` statements, or hallucinated methods that don't exist. Furthermore, hardcoded scripts struggle with complex conditional flows.
-*   **The Solution:** The AI writes a strict JSON format (e.g., `{"action": "clickSave"}`). This JSON DSL has been enhanced to support enterprise logic like dynamic variable extraction (`extractValue`) and conditional control flows (`if/else` blocks). A static, human-written Playwright engine (`json-runner.spec.ts`) reads this JSON and safely executes it.
+*   **The Solution:** The AI writes a strict JSON format (e.g., `{"action": "clickSave"}`). This JSON DSL has been enhanced to support enterprise logic like dynamic variable extraction (`extractValue`), conditional control flows (`if/else` blocks), and **API Bridge Patterns (`apiRequest`)** to seamlessly mix UI actions with backend REST validations. A static, human-written Playwright engine (`json-runner.spec.ts`) reads this JSON and safely executes it while generating **Conversational Execution Traces** (e.g., `[AGENT] Identified 'Save' button; clicking it`) for BPO-friendly reporting.
 *   **What it solves:** Test execution is 100% deterministic. The AI handles the "what to test" (logic), and the hardened engine handles the "how to click it" (execution).
 
 **Visual Comparison:**
@@ -48,13 +48,13 @@ await page.locator('button[title="Save"]').click();
 *   **The Problem:** Salesforce mixes modern Lightning UI with legacy Visualforce, Canvas apps, and Setup iframes. Playwright traditionally goes blind inside iframes.
 *   **The Solution:** The `IframeEngine` recursively and silently hunts through `page.frames()`. QA testers can interact with fields buried in iframes without ever manually specifying frame locators.
 
-### Defense 5: Tooling API "Spy" Agent
-*   **The Problem:** Custom LWCs and Managed Packages have unpredictable UIs. Writing page objects for them is a slow, manual engineering task.
-*   **The Solution:** An autonomous Playwright MCP agent logs into the UI, recursively pierces the DOM, extracts interactive elements, and *automatically writes a bespoke TypeScript Page Object*. 
+### Defense 5: Agentic Discovery Mode (Navigation Agent)
+*   **The Problem:** Custom LWCs and Managed Packages have unpredictable UIs with hidden DOM elements (modals, accordions, tabs). Parsing a single static DOM snapshot is often insufficient.
+*   **The Solution:** The `/sfspeckit-e2e-discover` skill operates as an autonomous **Navigation Agent**. It actively uses Playwright MCP tools (`browser_navigate`, `browser_action`) to click through the live UI, expose hidden elements, and synthesize the required JSON DSL steps, rather than just passively parsing a snapshot.
 
 ### Defense 6: Data Pollution, Isolation & Native Seeding
 *   **The Problem:** E2E testing frameworks quickly pollute testing environments with junk records. Running tests in parallel causes `UNABLE_TO_LOCK_ROW` collisions when tests fight over the same static data. Furthermore, baseline UI tests immediately fail in newly refreshed sandboxes or ephemeral scratch orgs if foundational records do not exist.
-*   **The Solution:** The framework enforces strict **Data Isolation by Design**. The JSON generators mandate dynamic timestamps (`{{QA_PREFIX}}-{{@timestamp}}`) for all unique data creation. A built-in cleanup utility (`npm run qa:cleanup`) automatically hard-deletes all generated data immediately after the test suite finishes. For empty orgs, the native `data-tree-seeder.ts` utility programmatically loads relational foundational data using the Salesforce CLI before the UI automation begins, completely removing the need for expensive third-party seeding tools like Snowfakery.
+*   **The Solution:** The framework enforces strict **Data Isolation by Design**. The JSON generators mandate dynamic timestamps (`{{QA_PREFIX}}-{{@timestamp}}`) and integrate **`faker.js`** for highly realistic synthetic data generation (`{{@faker.person.firstName}}`). To prevent lock collisions on retry, the Playwright engine automatically re-provisions entirely fresh data records before re-executing a failed test. A built-in cleanup utility (`npm run qa:cleanup`) automatically hard-deletes all generated data immediately after the test suite finishes. For empty orgs, the native `data-tree-seeder.ts` utility programmatically loads relational foundational data using the Salesforce CLI before the UI automation begins, completely removing the need for expensive third-party seeding tools like Snowfakery.
 
 ### Defense 7: Native Visual Regression Testing
 *   **The Problem:** CSS and styling regressions (like a button moving 10 pixels to the left, or a font color changing) are impossible to catch with standard click-and-assert testing.
@@ -67,6 +67,19 @@ await page.locator('button[title="Save"]').click();
 ### Defense 9: Cross-Browser & Mobile Cloud Execution
 *   **The Problem:** Testing Salesforce Experience Cloud and Service Console across Mac, Windows, iOS, and different browsers is incredibly difficult to maintain locally.
 *   **The Solution:** Seamless BrowserStack integration via `playwright.config.ts`. Simply setting `USE_BROWSERSTACK=true` dynamically routes the execution matrix to run against `chrome-cloud`, `safari-cloud`, and `mobile-ios` instances automatically.
+
+### Defense 10: Salesforce MCP Server Integration & Graceful Fallback
+*   **The Problem:** UI-based data setup (e.g., clicking through 5 screens to create a Community User) is incredibly slow and brittle.
+*   **The Solution:** The JSON DSL supports an `mcpExecute` action to delegate complex backend setups directly to the official Salesforce DX MCP Server. 
+*   **Graceful Fallback:** If the MCP is unavailable in the execution environment, the framework catches the `MCP_UNAVAILABLE` error and automatically executes a `fallbackFactory` array (standard UI/API data creation rules) so the test never fails due to infrastructure.
+*   **Salesforce Configuration Required for MCP:**
+    1. **CLI Authentication:** The environment running the test must have the Salesforce CLI (`sf`) installed and authenticated to the target org.
+    2. **API Access:** The authenticated user profile must have "API Enabled" and sufficient permissions (e.g., System Administrator) to execute the required commands.
+    3. **No Managed Package Required:** The MCP Server leverages standard Tooling/REST APIs. You do not need to install any managed packages into the Salesforce org itself.
+
+### Defense 11: LLM Vision Assertions
+*   **The Problem:** Complex UI states like chart rendering (e.g., "Are there 3 blue bars?"), specific branding colors, or Canvas apps are impossible to assert via DOM text matching.
+*   **The Solution:** The `assertVision` action captures a high-resolution screenshot and delegates the validation to an LLM Vision model based on a natural language prompt, entirely bypassing fragile DOM selectors.
 
 ---
 
@@ -85,7 +98,7 @@ How does SFSpeckit E2E compare to the industry standard, Provar?
 | **Salesforce Coverage**| 100% (Spy Agent + Iframe Engine) | 100% (Full platform) | 🤝 Tie |
 | **Parallel Execution** | True Data Isolation via Workers | Built-in | 🤝 Tie |
 | **Cross-Browser/Mobile**| Native BrowserStack Cloud Matrix | Complex remote node setup | 🏆 SFSpeckit |
-| **Reporting** | RCA Excel + HTML | Enterprise Jira Integration | 🏆 Provar |
+| **Reporting** | RCA Excel + Native HTML Dashboards | Enterprise Jira Integration | 🏆 Provar |
 
 **Bottom Line:** SFSpeckit E2E matches Provar in stability and platform coverage, while drastically outperforming it in speed, test authoring experience, cost, and CI/CD simplicity.
 
