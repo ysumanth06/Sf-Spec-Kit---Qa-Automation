@@ -1,0 +1,45 @@
+{
+  "personas": [
+    {
+      "name": "Admin",
+      "username": "qa.admin@company.com.qa",
+      "alias": "qa-admin",
+      "expected": {
+        "profile": "System Administrator",
+        "role": "CEO",
+        "permissionSets": []
+      }
+    },
+    {
+      "name": "Standard Manager",
+      "username": "qa.std.mgr@company.com.qa",
+      "alias": "qa-std-mgr",
+      "expected": {
+        "profile": "Standard User",
+        "role": "Manager",
+        "permissionSets": ["Provider_View", "Reports_Access"]
+      }
+    },
+    {
+      "name": "Standard Rep",
+      "username": "qa.std.rep@company.com.qa",
+      "alias": "qa-std-rep",
+      "expected": {
+        "profile": "Standard User",
+        "role": "Sales Rep",
+        "permissionSets": []
+      }
+    },
+    {
+      "name": "Read Only External",
+      "username": "qa.readonly@company.com.qa",
+      "alias": "qa-readonly",
+      "expected": {
+        "profile": "Read Only",
+        "role": "External Partner",
+        "permissionSets": []
+      }
+    }
+  ],
+  "_comment": "Optional per persona: \"communityUrl\": \"https://mydomain--sandbox.my.site.com/partner\""
+}

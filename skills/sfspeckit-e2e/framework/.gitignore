@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+
+# Test output
+test-results/
+reports/
+screenshots/
+metadata-cache/
+
+# Playwright
+playwright-report/
+
+# Build output
+dist/
+
+# OS
+.DS_Store
+Thumbs.db

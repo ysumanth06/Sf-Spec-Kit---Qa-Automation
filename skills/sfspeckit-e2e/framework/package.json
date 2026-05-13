@@ -1,0 +1,30 @@
+{
+  "name": "sfspeckit-e2e",
+  "version": "1.0.0",
+  "description": "SFSpeckit E2E Testing Framework — Playwright-based, JSON DSL-driven Salesforce automation",
+  "private": true,
+  "scripts": {
+    "qa:doctor": "tsx utils/doctor.ts",
+    "qa:run": "playwright test executor/json-runner.spec.ts",
+    "qa:run:headed": "playwright test executor/json-runner.spec.ts --headed",
+    "qa:run:debug": "playwright test executor/json-runner.spec.ts --debug",
+    "qa:report": "playwright show-report reports/html",
+    "qa:baseline": "tsx generators/baseline-scanner.ts",
+    "qa:codegen": "tsx utils/codegen.ts",
+    "qa:cleanup": "tsx utils/cleanup.ts",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.50.0",
+    "dotenv": "^16.4.7",
+    "exceljs": "^4.4.0",
+    "jsforce": "^3.6.3"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^10.4.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
